@@ -1,0 +1,33 @@
+# General
+__pycache__/
+*.pyc
+*.pyo
+*.swp
+.DS_Store
+
+# Virtual Environment
+venv/
+env/
+
+# Django
+db.sqlite3
+/media/
+*.log
+*.bak
+
+# Migrations (Optional)
+**/migrations/*.py
+!**/migrations/__init__.py
+
+# Secrets
+.env
+
+# Node.js (Vue)
+node_modules/
+dist/
+*.log
+
+# IDE / Editor
+.vscode/
+.idea/
+*.iml
