@@ -3,9 +3,11 @@ import LoginPage from '../pages/Login.vue';
 import DashboardPage from '../pages/Dashboard.vue';
 import ProjectsPage from '../pages/Projects.vue'; // Import Projects Page
 import { useAuthStore } from '../store/auth';
+import Demo from "../pages/Demo.vue";
 
 const routes = [
     { path: '/', component: LoginPage },
+    {path: '/demo', component: Demo },
     { path: '/dashboard', component: DashboardPage, meta: { requiresAuth: true } },
     { path: '/projects', component: ProjectsPage, meta: { requiresAuth: true } }, // Add projects route
 ];

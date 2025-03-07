@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import axios from "axios";
+import Sidebar from "../components/Sidebar.vue";
+import Navbar from "../layouts/Navbar.vue";
+
+// Sidebar state
+const isSidebarCollapsed = ref(false);
+const handleSidebarToggle = (collapsed: boolean) => {
+  isSidebarCollapsed.value = collapsed;
+};
 
 // Reactive state
 const projects = ref([]);
@@ -20,7 +28,7 @@ const searchFilters = ref({
   status: "",
 });
 
-// Fetch projects from API with token
+// Fetch projects from API
 const fetchProjects = async () => {
   try {
     const token = localStorage.getItem("accessToken");
@@ -67,9 +75,7 @@ const filteredProjects = computed(() => {
                 .includes(searchFilters.value[key as keyof typeof searchFilters.value].toLowerCase());
           })
       )
-      .sort((a, b) =>
-          (a[sortKey.value] > b[sortKey.value] ? 1 : -1) * sortOrder.value
-      );
+      .sort((a, b) => (a[sortKey.value] > b[sortKey.value] ? 1 : -1) * sortOrder.value);
 });
 
 // Sort function
@@ -87,63 +93,84 @@ onMounted(fetchProjects);
 </script>
 
 <template>
-  <div class="p-6 bg-white shadow-md rounded-lg">
-    <h2 class="text-xl font-semibold text-gray-800 mb-4">Projects</h2>
+  <div class="flex h-screen bg-gray-100">
+    <!-- Sidebar -->
+    <Sidebar class="fixed left-0 top-0 h-full" @toggle-sidebar="handleSidebarToggle" />
 
-    <p v-if="loading" class="text-gray-500">Loading projects...</p>
-    <p v-if="error" class="text-red-500">{{ error }}</p>
+    <!-- Main Content -->
+    <div
+        class="flex-1 flex flex-col transition-all duration-300"
+        :class="{ 'ml-64': !isSidebarCollapsed, 'ml-20': isSidebarCollapsed }"
+    >
+      <!-- Navbar -->
+      <Navbar :isSidebarCollapsed="isSidebarCollapsed" />
 
-    <div v-if="!loading && !error" class="overflow-x-auto">
-      <table class="min-w-full border border-gray-200">
-        <thead>
-        <tr class="bg-green-700 text-white">
-          <th class="p-3 cursor-pointer" @click="sortBy('rfx_number')">RFX Number</th>
-          <th class="p-3 cursor-pointer" @click="sortBy('name')">Project Name</th>
-          <th class="p-3 cursor-pointer" @click="sortBy('contracting_company')">Contractor</th>
-          <th class="p-3 cursor-pointer" @click="sortBy('contract_date')">Project Date</th>
-          <th class="p-3 cursor-pointer" @click="sortBy('constituency')">Constituency</th>
-          <th class="p-3 cursor-pointer" @click="sortBy('status')">Status</th>
-        </tr>
-        <tr class="bg-green-100">
-          <th class="p-2">
-            <input v-model="searchFilters.rfx_number" placeholder="Search..." class="input" />
-          </th>
-          <th class="p-2">
-            <input v-model="searchFilters.name" placeholder="Search..." class="input" />
-          </th>
-          <th class="p-2">
-            <input v-model="searchFilters.contracting_company" placeholder="Search..." class="input" />
-          </th>
-          <th class="p-2">
-            <input v-model="searchFilters.contract_date" type="date" class="input" />
-          </th>
-          <th class="p-2">
-            <input v-model="searchFilters.constituency" placeholder="Search..." class="input" />
-          </th>
-          <th class="p-2">
-            <input v-model="searchFilters.status" placeholder="Search..." class="input" />
-          </th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr v-for="project in filteredProjects" :key="project.rfx_number" class="hover:bg-gray-100 transition">
-          <td class="p-3 border">{{ project.rfx_number }}</td>
-          <td class="p-3 border">{{ project.name }}</td>
-          <td class="p-3 border">{{ project.contracting_company }}</td>
-          <td class="p-3 border">{{ project.contract_date }}</td>
-          <td class="p-3 border">{{ constituencies[project.constituency] || 'Unknown' }}</td>
-          <td class="p-3 border">
-              <span :class="{
-                'text-green-600 font-bold': project.status === 'Completed',
-                'text-orange-500 font-bold': project.status === 'Ongoing',
-                'text-red-500 font-bold': project.status === 'Pending'
-              }">
-                {{ project.status }}
-              </span>
-          </td>
-        </tr>
-        </tbody>
-      </table>
+      <!-- Page Content -->
+      <main class="mt-16 p-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Projects</h2>
+
+        <p v-if="loading" class="text-gray-500">Loading projects...</p>
+        <p v-if="error" class="text-red-500">{{ error }}</p>
+
+        <div v-if="!loading && !error" class="overflow-x-auto bg-white p-4 rounded-lg shadow-md">
+          <table class="w-full border border-gray-200">
+            <thead>
+            <tr class="bg-green-700 text-white">
+              <th class="p-3 cursor-pointer" @click="sortBy('rfx_number')">RFX Number</th>
+              <th class="p-3 cursor-pointer" @click="sortBy('name')">Project Name</th>
+              <th class="p-3 cursor-pointer" @click="sortBy('contracting_company')">Contractor</th>
+              <th class="p-3 cursor-pointer" @click="sortBy('contract_date')">Project Date</th>
+              <th class="p-3 cursor-pointer" @click="sortBy('constituency')">Constituency</th>
+              <th class="p-3 cursor-pointer" @click="sortBy('status')">Status</th>
+            </tr>
+            <tr class="bg-green-100">
+              <th class="p-2">
+                <input v-model="searchFilters.rfx_number" placeholder="Search..." class="input" />
+              </th>
+              <th class="p-2">
+                <input v-model="searchFilters.name" placeholder="Search..." class="input" />
+              </th>
+              <th class="p-2">
+                <input v-model="searchFilters.contracting_company" placeholder="Search..." class="input" />
+              </th>
+              <th class="p-2">
+                <input v-model="searchFilters.contract_date" type="date" class="input" />
+              </th>
+              <th class="p-2">
+                <input v-model="searchFilters.constituency" placeholder="Search..." class="input" />
+              </th>
+              <th class="p-2">
+                <input v-model="searchFilters.status" placeholder="Search..." class="input" />
+              </th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr
+                v-for="project in filteredProjects"
+                :key="project.rfx_number"
+                class="hover:bg-gray-100 transition"
+            >
+              <td class="p-3 border">{{ project.rfx_number }}</td>
+              <td class="p-3 border">{{ project.name }}</td>
+              <td class="p-3 border">{{ project.contracting_company }}</td>
+              <td class="p-3 border">{{ project.contract_date }}</td>
+              <td class="p-3 border">{{ constituencies[project.constituency] || "Unknown" }}</td>
+              <td class="p-3 border">
+                  <span
+                      :class="{
+                      'text-green-600 font-bold': project.status === 'Completed',
+                      'text-orange-500 font-bold': project.status === 'Ongoing',
+                      'text-red-500 font-bold': project.status === 'Pending'
+                    }"
+                  >
+                    {{ project.status }}
+                  </span>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </main>
     </div>
   </div>
 </template>

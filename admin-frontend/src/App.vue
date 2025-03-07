@@ -1,14 +1,20 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { useAuthStore } from "./store/auth.ts";
-import { RouterView } from "vue-router";
+import { useRoute, RouterView } from "vue-router";
 import Sidebar from "./components/Sidebar.vue";
+import Navbar from "./layouts/Navbar.vue"; // Import Navbar
 
 const authStore = useAuthStore();
+const route = useRoute();
+
 const isSidebarCollapsed = ref(false);
 
 // Compute authentication status
 const isAuthenticated = computed(() => !!authStore.token);
+
+// Compute if the current page is login
+const isLoginPage = computed(() => route.path === "/");
 
 // Receive event from Sidebar.vue
 const handleSidebarToggle = (collapsed: boolean) => {
@@ -17,34 +23,30 @@ const handleSidebarToggle = (collapsed: boolean) => {
 </script>
 
 <template>
+
+
   <div class="flex">
-    <!-- Show Sidebar only if authenticated -->
-    <Sidebar v-if="isAuthenticated" @toggle-sidebar="handleSidebarToggle" />
+    <!-- Show Sidebar only if authenticated and NOT on login page -->
+    <Sidebar
+        v-if="isAuthenticated && !isLoginPage"
+        @toggle-sidebar="handleSidebarToggle"
+    />
 
     <!-- Main Content Area -->
     <div
-        class="transition-all duration-300 p-6"
+        class="transition-all duration-300 min-h-screen"
         :class="{
-        'ml-64 w-[calc(100%-16rem)]': isAuthenticated && !isSidebarCollapsed,
-        'ml-20 w-[calc(100%-5rem)]': isAuthenticated && isSidebarCollapsed,
-        'w-full': !isAuthenticated, // Full width if not authenticated
+        'ml-64 w-[calc(100%-16rem)]': isAuthenticated && !isSidebarCollapsed && !isLoginPage,
+        'ml-20 w-[calc(100%-5rem)]': isAuthenticated && isSidebarCollapsed && !isLoginPage,
+        'w-full': isLoginPage || !isAuthenticated, // Full width if login page or not authenticated
       }"
     >
-      <header
-          v-if="isAuthenticated"
-          class="flex justify-between p-4 bg-green-700 text-white"
-      >
-        <h1 class="text-lg font-bold">Admin Dashboard</h1>
-        <button
-            @click="authStore.logout"
-            class="px-4 py-2 bg-red-500 rounded hover:bg-red-600"
-        >
-          Logout
-        </button>
-      </header>
+      <!-- Show Navbar only if authenticated and NOT on login page -->
+      <Navbar v-if="isAuthenticated && !isLoginPage" />
 
-      <main class="transition-all duration-300">
-        <RouterView />
+      <main class="p-4">
+        <RouterView :sidebarExpanded="!isSidebarCollapsed" />
+
       </main>
     </div>
   </div>

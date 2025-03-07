@@ -7,7 +7,7 @@ const route = useRoute();
 const isCollapsed = ref(false);
 const emit = defineEmits(["toggle-sidebar"]);
 
-// Toggle sidebar and notify parent (App.vue)
+// Toggle sidebar and notify parent
 const toggleSidebar = () => {
   isCollapsed.value = !isCollapsed.value;
   emit("toggle-sidebar", isCollapsed.value);
@@ -31,12 +31,12 @@ const navigateTo = (path: string) => {
 
 <template>
   <aside
-      class="h-screen bg-green-700 text-white transition-all duration-300 flex flex-col fixed top-0 left-0"
+      class="h-screen bg-green-900 text-white transition-all duration-300 flex flex-col fixed top-0 left-0 shadow-lg"
       :class="{ 'w-64': !isCollapsed, 'w-20': isCollapsed }"
   >
-    <!-- Sidebar Header & Toggle Button -->
+    <!-- Sidebar Header & Toggle -->
     <div class="p-4 flex justify-between items-center">
-      <h1 v-if="!isCollapsed" class="text-xl font-bold">Dashboard</h1>
+      <h1 v-if="!isCollapsed" class="text-xl font-bold">Admin Panel</h1>
       <button
           @click="toggleSidebar"
           class="p-2 bg-orange-500 rounded transition-transform hover:scale-110"
@@ -58,7 +58,9 @@ const navigateTo = (path: string) => {
         }"
       >
         <span>{{ item.icon }}</span>
-        <span v-if="!isCollapsed" class="text-white font-medium">{{ item.name }}</span>
+        <span v-if="!isCollapsed" class="text-white font-medium">
+          {{ item.name }}
+        </span>
       </button>
     </nav>
   </aside>
