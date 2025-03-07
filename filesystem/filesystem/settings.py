@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-9b%y^uqrj=03)+dl9g=f(v)_r1))n_wc1k(xjf@gn4st3jxd+7
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [ "127.0.0.1", "localhost"]
 
 
 # Application definition
@@ -153,6 +153,9 @@ SIMPLE_JWT ={
     'AUTH_HEADER_TYPES': ('Bearer',),  # Authorization: Bearer <token>
 }
 CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5174",
     "http://localhost:5173",
 ]
-CSRF_TRUSTED_ORIGINS = ["http://localhost:5173"]
+CSRF_TRUSTED_ORIGINS = ["http://localhost:5174",
+                        "http://localhost:5173",
+]

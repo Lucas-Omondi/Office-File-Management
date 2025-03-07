@@ -12,18 +12,18 @@ class Region(models.Model):
 
 class County(models.Model):
     name = models.CharField(max_length=100)
-    region = models.ForeignKey(Region, related_name='counties', on_delete=models.CASCADE)
+    region = models.ForeignKey(Region, related_name='counties', on_delete=models.PROTECT)
 
     def __str__(self):
-        return f"County: {self.name} ({self.region.name})"
+        return f"County: {self.name} ({getattr(self.region, 'name', 'No Region')})"
 
 
 class Constituency(models.Model):
     name = models.CharField(max_length=100)
-    county = models.ForeignKey(County, related_name='constituencies', on_delete=models.CASCADE)
+    county = models.ForeignKey(County, related_name='constituencies', on_delete=models.PROTECT)
 
     def __str__(self):
-        return f"Constituency: {self.name} ({self.county.name})"
+        return f"Constituency: {self.name} ({getattr(self.county, 'name', 'No County')})"
 
 
 class Project(models.Model):
@@ -35,7 +35,7 @@ class Project(models.Model):
 
     rfx_number = models.BigIntegerField(primary_key=True)  # Unique identifier
     name = models.CharField(max_length=100)
-    constituency = models.ForeignKey(Constituency, related_name='projects', on_delete=models.CASCADE)
+    constituency = models.ForeignKey(Constituency, related_name='projects', on_delete=models.PROTECT)
     contracting_company = models.CharField(max_length=255)
     contract_date = models.DateField(default=datetime.date.today)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='not_started')
@@ -46,7 +46,7 @@ class Project(models.Model):
 
 class File(models.Model):
     name = models.CharField(max_length=100)
-    file = models.FileField(upload_to='')
+    file = models.FileField(upload_to='uploads/files/')  # ✅ Saves files in /media/uploads/files/
     project = models.ForeignKey(Project, related_name='files', on_delete=models.CASCADE)
 
     def __str__(self):
@@ -65,8 +65,7 @@ class User(AbstractUser):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='basic_user')
 
     def save(self, *args, **kwargs):
-        # Only override role if it wasn't set explicitly
-        if not self.role:
+        if not self.role:  # ✅ Only set if empty
             if self.is_superuser:
                 self.role = "super_admin"
             elif self.is_staff:

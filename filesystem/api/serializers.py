@@ -20,6 +20,16 @@ class ConstituencySerializer(serializers.ModelSerializer):
     class Meta:
         model = Constituency
         fields = ['id', 'name', 'county']
+    def get_county(self, obj):
+        return{
+            "id": obj.county.id,
+            "name": obj.county.name,
+            "region":{
+                "id": obj.county.region.id,
+                "name": obj.county.region.name
+            }
+
+        }
 
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
