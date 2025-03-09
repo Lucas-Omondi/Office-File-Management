@@ -1,23 +1,23 @@
-<script setup lang="ts">
-defineProps<{
-  label: string;
-  icon?: string;
-  color?: "green" | "blue" | "red"; // Default color options
-  onClick: () => void;
-}>();
+<script setup>
+import { ref } from 'vue';
+import Modal from '../components/Modal.vue';
+
+const isOpen = ref(false);
 </script>
 
 <template>
-  <button
-      @click="onClick"
-      :class="[
-      'flex items-center gap-2 px-4 py-2 rounded-lg text-white shadow-md transition-all duration-200',
-      color === 'green' ? 'bg-green-600 hover:bg-green-700' :
-      color === 'blue' ? 'bg-blue-600 hover:bg-blue-700' :
-      color === 'red' ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-600 hover:bg-gray-700'
-    ]"
-  >
-    <i v-if="icon" :class="icon"></i>
-    {{ label }}
-  </button>
+  <div>
+    <!-- Floating Compose Button -->
+    <button
+        @click="isOpen = true"
+        class="fixed bottom-6 right-6 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-full shadow-lg transition-all duration-300 flex items-center gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 5v14M5 12h14"/>
+      </svg>
+      <span class="hidden sm:inline">Compose</span>
+    </button>
+
+    <!-- Modal -->
+    <Modal v-if="isOpen" @close="isOpen = false" />
+  </div>
 </template>

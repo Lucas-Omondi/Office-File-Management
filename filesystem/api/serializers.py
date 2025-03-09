@@ -8,14 +8,13 @@ class RegionSerializer(serializers.ModelSerializer):
         fields = ['id', 'name']
 
 class CountySerializer(serializers.ModelSerializer):
-    region = RegionSerializer()
-
+    region = serializers.PrimaryKeyRelatedField(queryset=Region.objects.all())
     class Meta:
         model = County
         fields = ['id', 'name', 'region']
 
 class ConstituencySerializer(serializers.ModelSerializer):
-    county = CountySerializer()
+    county = serializers.PrimaryKeyRelatedField(queryset=County.objects.all())
 
     class Meta:
         model = Constituency
@@ -32,9 +31,11 @@ class ConstituencySerializer(serializers.ModelSerializer):
         }
 
 class ProjectSerializer(serializers.ModelSerializer):
+    constituency = serializers.PrimaryKeyRelatedField(queryset=Constituency.objects.all())
+
     class Meta:
         model = Project
-        fields = ['rfx_number', 'name', 'constituency', 'contracting_company', 'contract_date', 'status']
+        fields = "__all__"
 
 class FileSerializer(serializers.ModelSerializer):
     project = serializers.SlugRelatedField(

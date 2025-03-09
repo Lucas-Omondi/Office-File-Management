@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework import status
+from rest_framework.decorators import action
 from django.contrib.auth import authenticate, get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Region, County, Constituency, Project, File
@@ -110,13 +111,25 @@ class ConstituencyViewSet(viewsets.ModelViewSet):
 # ✅ Project ViewSet (Uses RFX Number)
 class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
-    lookup_field = "rfx_number"
+    lookup_field = "id"
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         constituency_id = self.kwargs.get("constituency_id")
         return Project.objects.filter(constituency_id=constituency_id) if constituency_id else Project.objects.all()
 
+    @action(detail=False, methods=['delete'], permission_classes=[IsAuthenticated])
+    def bulk_delete(self, request):
+        ids = request.data.get("ids", [])
+        if not ids:
+            return Response({"error": "No project IDs provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        deleted_count, _ = Project.objects.filter(id__in=ids).delete()
+        print(f"Deleted {deleted_count} projects.")
+        return Response(
+            {"message": f"{deleted_count} projects deleted successfully"},
+            status=status.HTTP_204_NO_CONTENT
+        )
 
 # ✅ File ViewSet (With Role-Based Permissions)
 class FileViewSet(viewsets.ModelViewSet):
@@ -143,3 +156,4 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
+

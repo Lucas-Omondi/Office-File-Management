@@ -28,17 +28,17 @@ class Constituency(models.Model):
 
 class Project(models.Model):
     STATUS_CHOICES = [
-        ('not_started', 'Not Started'),
-        ('ongoing', 'Ongoing'),
-        ('completed', 'Completed'),
+        ('Not started', 'Not Started'),
+        ('Ongoing', 'Ongoing'),
+        ('Completed', 'Completed'),
     ]
-
-    rfx_number = models.BigIntegerField(primary_key=True)  # Unique identifier
+    id = models.AutoField(primary_key=True)
+    rfx_number = models.BigIntegerField(unique=True)  # Unique identifier
     name = models.CharField(max_length=100)
     constituency = models.ForeignKey(Constituency, related_name='projects', on_delete=models.PROTECT)
     contracting_company = models.CharField(max_length=255)
     contract_date = models.DateField(default=datetime.date.today)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='not_started')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Not Started')
 
     def __str__(self):
         return f"Project: {self.name} (RFX: {self.rfx_number})"
