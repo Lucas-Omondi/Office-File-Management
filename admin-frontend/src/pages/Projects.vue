@@ -1,27 +1,39 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import {ref, computed, onMounted, nextTick} from "vue";
 import axios from "axios";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../layouts/Navbar.vue";
 import Modal from "../components/Modal.vue";
-import AddProject from "../components/AddProject.vue";
+import AddProject from "../components/projects/AddProject.vue";
 import AddCounty from "../components/AddCounty.vue";
 import AddConstituency from "../components/AddConstituency.vue";
 import AddRegion from "../components/AddRegion.vue";
-import EditProject from "../components/EditProject.vue";
+import EditProject from "../components/projects/EditProject.vue";
 import ConfirmDelete from "../components/ConfirmDelete.vue";
 import {useProjectStore} from "../store/useProjectStore.ts";
-
+import {useAuthStore} from "../store/auth.ts";
 // Props
 defineProps({
   sidebarExpanded: Boolean,
 });
+//hiding buttons
+const authStore = useAuthStore();
+const userRole = computed(() => authStore.user?.role);
+console.log(userRole);
 
 // Sidebar state
 const isSidebarCollapsed = ref(false);
 const handleSidebarToggle = (collapsed: boolean) => {
   isSidebarCollapsed.value = collapsed;
 };
+
+// Ensure layout updates correctly on first load
+onMounted(() => {
+  nextTick(() => {
+    isSidebarCollapsed.value = true; // Set to true again after mounting
+  });
+});
+
 
 // Reactive state
 const projects = ref<any[]>([]);  // Ensure it's defined as an empty array
@@ -75,18 +87,33 @@ const fetchProjects = async () => {
     }
 
     const [projectsResponse, constituenciesResponse] = await Promise.all([
-      axios.get("http://127.0.0.1:8000/api/projects/", {
+      axios.get(`${import.meta.env.VITE_API_BASE_URL}/projects`, {
         headers: { Authorization: `Bearer ${token}` },
       }),
-      axios.get("http://127.0.0.1:8000/api/constituencies/", {
+      axios.get(`${import.meta.env.VITE_API_BASE_URL}/constituencies`, {
         headers: { Authorization: `Bearer ${token}` },
       }),
     ]);
 
+    // Handle projects response
     projects.value = Array.isArray(projectsResponse.data) ? projectsResponse.data : [];
-    constituencies.value = Object.fromEntries(
-        constituenciesResponse.data.map((c: { id: number; name: string }) => [c.id, c.name])
-    );
+
+    // Log the constituencies data to inspect its structure
+    console.log('Constituencies Data:', constituenciesResponse.data);
+
+    // Handle constituencies response depending on its structure
+    if (Array.isArray(constituenciesResponse.data)) {
+      constituencies.value = Object.fromEntries(
+          constituenciesResponse.data.map((c: { id: number; name: string }) => [c.id, c.name])
+      );
+    } else {
+      // If data is not an array, check for alternative structures (like an object with a 'results' key)
+      constituencies.value = constituenciesResponse.data.results
+          ? Object.fromEntries(
+              constituenciesResponse.data.results.map((c: { id: number; name: string }) => [c.id, c.name])
+          )
+          : {}; // Set an empty object if no results or data
+    }
   } catch (err) {
     console.error("Error fetching data:", err.response?.data || err.message);
     error.value = "Failed to load projects. Please try again later.";
@@ -94,6 +121,7 @@ const fetchProjects = async () => {
     loading.value = false;
   }
 };
+
 
 // Computed filtered and sorted projects
 const filteredProjects = computed(() => {
@@ -138,7 +166,7 @@ const openDeleteModal = () => {
 const deleteProjects = async () => {
   try {
     const token = localStorage.getItem("accessToken");
-    await axios.delete("http://127.0.0.1:8000/api/projects/bulk_delete/", {
+    await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/projects/bulk_delete/`, {
       headers: { Authorization: `Bearer ${token}` },
       data: { ids: selectedProjects.value },  // 🔹 Send selected project IDs
     });
@@ -179,8 +207,8 @@ onMounted(fetchProjects);
             </select>
             <input v-model="searchQuery" placeholder="Search..." class="border p-2 rounded w-1/3" />
             <div v-if="selectedProjects.length" class="flex gap-2">
-              <button v-if="!isMultipleSelected" @click="openEditModal(filteredProjects.find(p => p.id === selectedProjects[0]))" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Edit</button>
-              <button v-if="isDeleteEnabled || isMultipleSelected || !isMultipleSelected" @click="openDeleteModal" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">Delete</button>
+              <button v-if="!isMultipleSelected && (userRole == 'Admin' || userRole=='Super admin')" @click="openEditModal(filteredProjects.find(p => p.id === selectedProjects[0]))" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Edit</button>
+              <button v-if="(isDeleteEnabled || isMultipleSelected || !isMultipleSelected)&&(userRole == 'Admin' || userRole == 'Super admin')" @click="openDeleteModal" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">Delete</button>
             </div>
           </div>
           <table class="w-full border border-gray-200 table-fixed">
@@ -209,7 +237,7 @@ onMounted(fetchProjects);
         </div>
       </main>
     </div>
-    <button @click="openModal('project')" class="fixed bottom-6 right-6 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-full shadow-lg transition-all duration-300 flex items-center gap-2">
+    <button v-if="userRole === 'Admin' || userRole === 'Super admin'" @click="openModal('project')" class="fixed bottom-6 right-6 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-full shadow-lg transition-all duration-300 flex items-center gap-2">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 5v14M5 12h14"/>
       </svg>
@@ -229,11 +257,11 @@ onMounted(fetchProjects);
     </Modal>
 
     <EditProject
-      v-if="activeEditProject"
-      :show="!!activeEditProject"
-      :project= "activeEditProject"
-      @close="closeEditModal"
-      @projectUpdated="handleProjectUpdated"
+        v-if="activeEditProject"
+        :show="!!activeEditProject"
+        :project= "activeEditProject"
+        @close="closeEditModal"
+        @projectUpdated="handleProjectUpdated"
     />
     <ConfirmDelete
         v-if="isDeleteModalOpen"

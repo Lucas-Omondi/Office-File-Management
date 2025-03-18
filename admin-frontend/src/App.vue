@@ -43,6 +43,7 @@ const handleSidebarToggle = (collapsed: boolean) => {
       <!-- Navbar (Only when authenticated) -->
       <Navbar v-if="isAuthenticated" />
 
+
       <main class="p-4">
         <RouterView :sidebarExpanded="!isSidebarCollapsed" />
       </main>

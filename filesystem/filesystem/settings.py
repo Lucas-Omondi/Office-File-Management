@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 from datetime import timedelta
+from django.conf import settings
+from django.conf.urls.static import static
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,13 +28,14 @@ SECRET_KEY = 'django-insecure-9b%y^uqrj=03)+dl9g=f(v)_r1))n_wc1k(xjf@gn4st3jxd+7
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [ "127.0.0.1", "localhost"]
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
 
 INSTALLED_APPS = [
     'api',
+    'django_extensions',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -139,6 +142,9 @@ MEDIA_ROOT=BASE_DIR/'files'
 AUTH_USER_MODEL = 'api.User'
 
 REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES':(
+        "rest_framework.renderers.JSONRenderer",
+    ),
     'DEFAULT_AUTHENTICATION_CLASSES':(
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
@@ -148,14 +154,38 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT ={
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),  # Set token expiration time
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),  # Set token expiration time
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),  # Refresh token lasts longer
     'AUTH_HEADER_TYPES': ('Bearer',),  # Authorization: Bearer <token>
 }
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5174",
     "http://localhost:5173",
+    "http://15.15.21.2:5173",
+    "http://*.*.*.*:5173",
 ]
 CSRF_TRUSTED_ORIGINS = ["http://localhost:5174",
                         "http://localhost:5173",
+                        "http://15.15.21.2:5173/",
 ]
+CORS_ALLOW_ALL_ORIGINS = True  # For testing
+CORS_ALLOW_HEADERS = [
+    "content-type",
+    "Authorization",
+    "accept",
+    "X-CSRFToken",
+    "X-Requested-With",
+]
+CORS_ALLOW_METHODS = [
+    "GET",
+    "POST",
+    "OPTIONS",
+    "PUT",
+    "DELETE",
+    "PATCH",
+]
+urlpatterns=[
+
+]
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT);

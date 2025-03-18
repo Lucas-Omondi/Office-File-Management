@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, defineEmits, onMounted } from "vue";
 import axios from "axios";
-import AddConstituency from "../components/AddConstituency.vue";
-import AddCounty from "../components/AddCounty.vue";
-import AddRegion from "./AddRegion.vue";
+import AddConstituency from "../AddConstituency.vue";
+import AddCounty from "../AddCounty.vue";
+import AddRegion from "../AddRegion.vue";
 
 
 const emit = defineEmits(["close", "projectAdded", "openAddConstituency"]);
@@ -26,7 +26,7 @@ const fetchConstituencies = async () => {
   try {
     const token = localStorage.getItem("accessToken");
     if (!token) throw new Error("Authentication required.");
-    const response = await axios.get("http://127.0.0.1:8000/api/constituencies/", {
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/constituencies/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     constituencies.value = response.data;
@@ -58,7 +58,7 @@ const submitProject = async () => {
 
     console.log("Sending project data:", projectData);
 
-    const response = await axios.post("http://127.0.0.1:8000/api/projects/", projectData, {
+    const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/projects/`, projectData, {
       headers: { Authorization: `Bearer ${token}` },
     });
 

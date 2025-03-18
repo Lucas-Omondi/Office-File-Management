@@ -20,7 +20,7 @@ const fetchCounties = async () => {
       error.value = "Authentication required. Please log in.";
       return;
     }
-    const response = await axios.get("http://127.0.0.1:8000/api/counties/", {
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/counties/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     counties.value = response.data;
@@ -42,7 +42,7 @@ const submitConstituency = async () => {
       return;
     }
 
-    const response = await axios.post("http://127.0.0.1:8000/api/constituencies/", constituencyForm.value, {
+    const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/constituencies/`, constituencyForm.value, {
       headers: { Authorization: `Bearer ${token}` },
     });
 

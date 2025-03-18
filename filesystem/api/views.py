@@ -1,8 +1,9 @@
-from rest_framework import viewsets
+from mypyc.doc.conf import project
+from rest_framework import viewsets, permissions, serializers
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser, DjangoModelPermissions, SAFE_METHODS
 from rest_framework import status
 from rest_framework.decorators import action
 from django.contrib.auth import authenticate, get_user_model
@@ -12,7 +13,11 @@ from .serializers import (
     RegionSerializer, CountySerializer, ConstituencySerializer,
     ProjectSerializer, FileSerializer, UserSerializer
 )
-from .permissions import IsSuperAdmin, IsAdmin
+from .permissions import IsSuperAdmin, IsAdmin, IsAdminOrSuperAdmin
+from rest_framework.permissions import BasePermission
+from django.http import FileResponse, Http404
+from django.shortcuts import get_object_or_404
+
 
 User = get_user_model()
 
@@ -78,6 +83,8 @@ class UserDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        print("Current User:", request.user)  # Debugging
+        print("User Authenticated:", request.user.is_authenticated)
         return Response(UserSerializer(request.user).data)
 
 
@@ -107,18 +114,47 @@ class ConstituencyViewSet(viewsets.ModelViewSet):
         county_id = self.kwargs.get("county_id")
         return Constituency.objects.filter(county_id=county_id) if county_id else Constituency.objects.all()
 
+class AdminOnlyDeletePermission(BasePermission):
+    def has_permission(self, request, view):
 
-# ✅ Project ViewSet (Uses RFX Number)
+        """ Allow safe methods (GET, HEAD, OPTIONS) for all authenticated users """
+        if request.method in SAFE_METHODS:
+            return True
+        return request.user.is_superuser or request.user.is_staff  # Only Admins & Super Admins can modify
+
+    def has_object_permission(self, request, view, obj):
+        """ Ensure only Admins or Super Admins can delete a project """
+        if request.method == "DELETE":
+            return request.user.is_superuser or request.user.is_staff
+        return True  # Allow other permitted actions
+# ✅ Project ViewSet (Uses ID)
 class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
     lookup_field = "id"
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsSuperAdmin, IsAuthenticated, IsAdmin]
 
     def get_queryset(self):
         constituency_id = self.kwargs.get("constituency_id")
         return Project.objects.filter(constituency_id=constituency_id) if constituency_id else Project.objects.all()
 
-    @action(detail=False, methods=['delete'], permission_classes=[IsAuthenticated])
+    def get_permissions(self):
+        print(f"DEBUG: get_permissions() called for action: {self.action}")  # 🔍 Check which action is being called
+
+        if self.action in ["list", "retrieve"]:  # ✅ All authenticated users should be able to view
+            print("DEBUG: View permissions applied (IsAuthenticated)")
+            return [permissions.IsAuthenticated()]
+
+        elif self.action in ["create", "update", "partial_update"]:  # ✅ Only Admins & Super Admins can modify
+            print("DEBUG: Modify permissions applied (IsAdmin or IsSuperAdmin)")
+            return [IsAdminOrSuperAdmin()]
+
+        elif self.action == "destroy":  # ✅ Strict delete permission
+            print("DEBUG: Delete permissions applied (IsSuperAdmin only)")
+            return [IsSuperAdmin()]
+
+        return super().get_permissions()
+
+    @action(detail=False, methods=['delete'], permission_classes=[IsAuthenticated, AdminOnlyDeletePermission])
     def bulk_delete(self, request):
         ids = request.data.get("ids", [])
         if not ids:
@@ -134,26 +170,60 @@ class ProjectViewSet(viewsets.ModelViewSet):
 # ✅ File ViewSet (With Role-Based Permissions)
 class FileViewSet(viewsets.ModelViewSet):
     serializer_class = FileSerializer
+    parser_classes = [MultiPartParser, FormParser]
     permission_classes = [IsAuthenticated]
-    parser_classes = (MultiPartParser, FormParser)
 
     def get_queryset(self):
-        user = self.request.user
-        if user.role == "basic_user":
-            return File.objects.all()  # TODO: Filter files user is allowed to see
-        return File.objects.all()
+        """
+        Filter files by project (rfx_number).
+        """
+        queryset = File.objects.all()
+        project_rfx = self.request.query_params.get("project")
 
-    def get_permissions(self):
-        if self.action in ["list", "retrieve"]:  # Viewing files
-            return [IsAuthenticated()]
-        elif self.action in ["create", "update", "partial_update", "destroy"]:  # Upload/Edit/Delete
-            return [IsAuthenticated(), IsAdmin()]
-        return super().get_permissions()
+        if project_rfx:
+            queryset = queryset.filter(project__rfx_number=project_rfx)
 
+        return queryset
+    @action(detail=True, methods=["get"], url_path="download")
+    def download(self, request, pk=None):
+        file_instance = get_object_or_404(File, id=pk)
+        file_path = file_instance.file.path  # Adjust based on your model field
+
+        try:
+            return FileResponse(open(file_path, "rb"), as_attachment=True, filename=file_instance.name)
+        except FileNotFoundError:
+            raise Http404("File not found")
 
 # ✅ User Management ViewSet (Admins Only)
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated]
 
+    @action(detail=True, methods=["patch"], permission_classes=[IsAuthenticated])
+    def toggle_active(self, request, pk=None):
+        """
+        Toggle the active status of a user.
+        """
+        user = self.get_object()
+        user.is_active = not user.is_active
+        user.save()
+        return Response({"message": "User status updated", "is_active": user.is_active})
+
+class CurrentUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
+
+class SummaryViewSet(APIView):
+    permission_classes = [IsAuthenticated]  # Optional: Require authentication
+
+    def get(self, request):
+        return Response({
+            "projects": Project.objects.count(),
+            "users": User.objects.count(),
+            "constituencies": Constituency.objects.count(),
+            "files": File.objects.count(),
+        })

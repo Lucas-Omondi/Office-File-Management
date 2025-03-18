@@ -27,7 +27,7 @@ const saveChanges = async () => {
 
     console.log("Updating project with data:", JSON.stringify(projectData, null, 2));
 
-    await axios.put(`http://127.0.0.1:8000/api/projects/${projectData.id}/`, projectData, {
+    await axios.put(`${import.meta.env.VITE_API_BASE_URL}/projects/${projectData.id}/`, projectData, {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     });
 

@@ -1,7 +1,26 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 import datetime
+from django.utils.timezone import now
 
+class User(AbstractUser):
+    ROLE_CHOICES = [
+        ('Super admin', 'Super Admin'),
+        ('Admin', 'Admin'),
+        ('Basic', 'Basic User'),
+    ]
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='basic_user')
+
+    def save(self, *args, **kwargs):
+        if not self.role:  # ✅ Only set if empty
+            if self.is_superuser:
+                self.role = "Super Admin"
+            elif self.is_staff:
+                self.role = "Admin"
+            else:
+                self.role = "Basic"
+
+        super().save(*args, **kwargs)
 
 class Region(models.Model):
     name = models.CharField(max_length=100)
@@ -28,7 +47,7 @@ class Constituency(models.Model):
 
 class Project(models.Model):
     STATUS_CHOICES = [
-        ('Not started', 'Not Started'),
+        ('Not Started', 'Not Started'),
         ('Ongoing', 'Ongoing'),
         ('Completed', 'Completed'),
     ]
@@ -45,32 +64,19 @@ class Project(models.Model):
 
 
 class File(models.Model):
-    name = models.CharField(max_length=100)
-    file = models.FileField(upload_to='uploads/files/')  # ✅ Saves files in /media/uploads/files/
-    project = models.ForeignKey(Project, related_name='files', on_delete=models.CASCADE)
-
-    def __str__(self):
-        return f"File: {self.name} (Project: {self.project.name}, Contractor: {self.project.contracting_company})"
-
-    def get_absolute_url(self):
-        return self.file.url
-
-
-class User(AbstractUser):
-    ROLE_CHOICES = [
-        ('super_admin', 'Super Admin'),
-        ('admin', 'Admin'),
-        ('basic_user', 'Basic User'),
-    ]
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='basic_user')
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="files")
+    file = models.FileField(upload_to="project_files/")
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    upload_date = models.DateTimeField(auto_now_add=True)
+    size = models.PositiveBigIntegerField(default=0)
+    name = models.CharField(max_length=255)
 
     def save(self, *args, **kwargs):
-        if not self.role:  # ✅ Only set if empty
-            if self.is_superuser:
-                self.role = "super_admin"
-            elif self.is_staff:
-                self.role = "admin"
-            else:
-                self.role = "basic_user"
-
+        """Auto-fill size and name on save."""
+        if not self.name:
+            self.name = self.file.name  # Default to uploaded filename
+        self.size = self.file.size  # Get file size
         super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.name} ({self.project.rfx_number})"
